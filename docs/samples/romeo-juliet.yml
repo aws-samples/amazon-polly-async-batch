@@ -1,0 +1,31 @@
+# Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+set:
+  name: romeo-juliet
+  output-prefix: act-1-scene-1
+
+defaults:
+  engine: standard
+  language-code: en-US
+  output-format: mp3
+  text-type: text
+
+items:
+  - text: Do you bite your thumb at us, sir?
+    voice-id: Joey
+  - text: I do bite my thumb, sir.
+    voice-id: Matthew
+  - text: <speak>Do you bite your thumb at <emphasis>us</emphasis>, sir?</speak>
+    voice-id: Joey
+    text-type: ssml
+  - text: >
+      <speak><amazon:effect name="whispered">Is the law of our side
+      if I say aye?</amazon:effect></speak>
+    voice-id: Matthew
+    text-type: ssml
+  - text: <speak><amazon:effect name="whispered">No.</amazon:effect></speak>
+    voice-id: Justin
+    text-type: ssml
+  - text: No, sir. I do not bite my thumb at you, sir, but I bite my thumb, sir.
+    voice-id: Matthew

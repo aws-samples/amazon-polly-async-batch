@@ -1,0 +1,45 @@
+{
+  "Comment": "Waits until a polly batch has completed",
+  "StartAt": "load",
+  "States": {
+    "load": {
+      "Type": "Task",
+      "Comment": "Loads the set from the database to check how many tasks remain to be synthesized",
+      "Resource": "arn:aws:lambda:::function:polly-batch-set-completion-loader",
+      "Next": "check"
+    },
+    "check": {
+      "Type": "Choice",
+      "Comment": "Checks to see if there are any tasks remaining, terminating if not",
+      "Choices": [{
+          "Variable": "$.minutesSinceLastUpdate",
+          "NumericGreaterThan": 60,
+          "Next": "abandon"
+        },
+        {
+          "Variable": "$.remaining",
+          "NumericGreaterThan": 0,
+          "Next": "wait"
+        }
+      ],
+      "Default": "notify"
+    },
+    "wait": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "load"
+    },
+    "notify": {
+      "Type": "Task",
+      "Comment": "Sends out a notification that the set is complete",
+      "Resource": "arn:aws:lambda:::function:polly-batch-set-completion-notifier",
+      "End": true
+    },
+    "abandon": {
+      "Type": "Task",
+      "Comment": "Sends out a notification that there's a problem with the set",
+      "Resource": "arn:aws:lambda:::function:polly-batch-set-problem-notifier",
+      "End": true
+    }
+  }
+}
