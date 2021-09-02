@@ -1,0 +1,498 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Run large numbers of voice synthesis tasks through Polly asynchronously.
+
+Globals:
+  Function:
+    Timeout: 3
+
+Parameters: 
+  NotificationEmail: 
+    Description: The email address for notification of job completion
+    Type: String
+  WorkBucket:
+    Description: A new S3 bucket where generated voice files will go
+    Type: String
+
+Resources:
+
+  # The Set Processor reads set files that are placed in the working bucket 
+  SetprocessorLambdaFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: amazon_polly_async_batch/
+      Handler: setprocessor.process_set
+      Runtime: python3.7
+      FunctionName: polly-batch-set-processor
+      MemorySize: 4096
+      Timeout: 900
+      Description: Submits text-to-speech jobs specified in a YAML file to SQS queue
+      Environment:
+        Variables:
+          WORK_BUCKET: !Ref WorkBucket
+          ITEM_QUEUE: polly-batch
+          TASK_TABLE: polly-batch-tasks
+          SET_TABLE: polly-batch-sets
+          RESPONSE_TOPIC: polly-batch-topic
+          SET_COMPLETE_WAITER_ARN: !Ref Pollybatchsetwaiter
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - 'logs:CreateLogStream'
+              - 'logs:CreateLogGroup'
+              - 'logs:PutLogEvents'
+            Resource:
+              - !Sub >-
+                arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/polly-batch-set-processor:*:*
+          - Effect: Allow
+            Action:
+              - 'sqs:GetQueueUrl'
+              - 'sqs:SendMessage'
+            Resource:
+              - !GetAtt 
+                - ItemQueue
+                - Arn
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+            Resource: 
+            - !Join 
+              - ''
+              - - 'arn:'
+                - !Ref 'AWS::Partition'
+                - ':s3:::'
+                - !Ref WorkBucket
+                - /*
+          - Effect: Allow
+            Action:
+              - 'dynamodb:PutItem'
+            Resource:
+              - !GetAtt 
+                - SetTable
+                - Arn
+          - Effect: Allow
+            Action:
+              - 'states:StartExecution'
+            Resource: !Ref Pollybatchsetwaiter
+      Events:
+        S3NewObjectEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref PollyBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: ".yml"
+    DependsOn:
+      - SetprocessorLogGroup
+  SetprocessorLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: /aws/lambda/polly-batch-set-processor
+  PollyBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Ref WorkBucket
+  SetprocessorLambdaPermissionPollyS3:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt 
+        - SetprocessorLambdaFunction
+        - Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: s3.amazonaws.com
+      SourceArn: !Join 
+        - ''
+        - - 'arn:'
+          - !Ref 'AWS::Partition'
+          - ':s3:::'
+          - !Ref WorkBucket
+      SourceAccount: !Ref 'AWS::AccountId'
+  SetprocessorLambdaPermissionPollybatch:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt 
+        - SetprocessorLambdaFunction
+        - Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: s3.amazonaws.com
+      SourceArn: !Join 
+        - ''
+        - - 'arn:'
+          - !Ref 'AWS::Partition'
+          - ':s3:::'
+          - !Ref WorkBucket
+      SourceAccount: !Ref 'AWS::AccountId'
+  SetNotification:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      DisplayName: Polly Batch processing complete
+      TopicName: polly-batch-set-complete
+  SNSTopicPollybatchSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Ref NotificationEmail
+      Protocol: email
+      TopicArn: !Ref SetNotification
+    DependsOn : SetNotification
+
+  # The Item Processor takes items off the SQS queue and sends them to Polly
+  ItemprocessorLambdaFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: amazon_polly_async_batch/
+      Handler: itemprocessor.process_sqs_message
+      Runtime: python3.7
+      FunctionName: polly-batch-item-processor
+      MemorySize: 128
+      Timeout: 6
+      Description: Reads items from SQS queue and submits them as tasks to Polly
+      Environment:
+        Variables:
+          WORK_BUCKET: !Ref WorkBucket
+          ITEM_QUEUE: polly-batch
+          TASK_TABLE: polly-batch-tasks
+          SET_TABLE: polly-batch-sets
+          RESPONSE_TOPIC: polly-batch-topic
+          RESPONSE_TOPIC_ARN: !Ref SNSTopicPollybatch
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - 'logs:CreateLogStream'
+                - 'logs:CreateLogGroup'
+                - 'logs:PutLogEvents'
+              Resource:
+                - !Sub >-
+                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/polly-batch-item-processor:*:*
+            - Effect: Allow
+              Action:
+                - 'sqs:ReceiveMessage'
+                - 'sqs:DeleteMessage'
+                - 'sqs:GetQueueAttributes'
+              Resource:
+                - !GetAtt 
+                  - ItemQueue
+                  - Arn
+            - Effect: Allow
+              Action:
+                - 'polly:StartSpeechSynthesisTask'
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - 's3:PutObject'
+              Resource:
+                - !Join 
+                  - ''
+                  - - 'arn:'
+                    - !Ref 'AWS::Partition'
+                    - ':s3:::'
+                    - !Ref WorkBucket
+                    - /*
+            - Effect: Allow
+              Action:
+                - 'sns:Publish'
+              Resource: !Ref SNSTopicPollybatch
+            - Effect: Allow
+              Action:
+                - 'dynamodb:DeleteItem'
+                - 'dynamodb:PutItem'
+              Resource:
+                - !GetAtt 
+                  - TaskTable
+                  - Arn
+                - !GetAtt 
+                  - SetTable
+                  - Arn
+            - Effect: Allow
+              Action:
+                - 'sqs:ReceiveMessage'
+                - 'sqs:DeleteMessage'
+                - 'sqs:GetQueueAttributes'
+              Resource:
+                - !GetAtt 
+                  - ItemQueue
+                  - Arn
+    DependsOn:
+      - ItemprocessorLogGroup
+  ItemprocessorLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: /aws/lambda/polly-batch-item-processor
+  ItemprocessorEventSourceMappingSQSItemQueue:
+    Type: 'AWS::Lambda::EventSourceMapping'
+    Properties:
+      BatchSize: 10
+      EventSourceArn: !GetAtt 
+        - ItemQueue
+        - Arn
+      FunctionName: !GetAtt 
+        - ItemprocessorLambdaFunction
+        - Arn
+      Enabled: true
+  ItemQueue:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      QueueName: polly-batch
+      VisibilityTimeout: 60
+
+  # The Response Processor handles notifications from Polly
+  ResponseprocessorLambdaFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: amazon_polly_async_batch/
+      Handler: responseprocessor.process_sns_message
+      Runtime: python3.7
+      FunctionName: polly-batch-response-processor
+      MemorySize: 128
+      Description: Given a response from Polly updates DynamoDB records
+      Environment:
+        Variables:
+          WORK_BUCKET: !Ref WorkBucket
+          ITEM_QUEUE: polly-batch
+          TASK_TABLE: polly-batch-tasks
+          SET_TABLE: polly-batch-sets
+          RESPONSE_TOPIC: polly-batch-topic
+      Policies: 
+        - Statement:
+          - Effect: Allow
+            Action:
+              - 'logs:CreateLogStream'
+              - 'logs:CreateLogGroup'
+              - 'logs:PutLogEvents'
+            Resource:
+              - !Sub >-
+                arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/polly-batch-response-processor:*:*
+          - Effect: Allow
+            Action:
+              - 'dynamodb:GetItem'
+              - 'dynamodb:PutItem'
+              - 'dynamodb:UpdateItem'
+            Resource:
+              - !GetAtt 
+                - TaskTable
+                - Arn
+              - !GetAtt 
+                - SetTable
+                - Arn
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:DeleteObject'
+              - 's3:PutObject'
+            Resource:
+             - !Join 
+              - ''
+              - - 'arn:'
+                - !Ref 'AWS::Partition'
+                - ':s3:::'
+                - !Ref WorkBucket
+                - '/*'
+    DependsOn:
+      - ResponseprocessorLogGroup
+  ResponseprocessorLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: /aws/lambda/polly-batch-response-processor
+  SNSTopicPollybatch:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      TopicName: polly-batch-topic
+      Subscription: 
+      - Endpoint: !GetAtt 
+            - ResponseprocessorLambdaFunction
+            - Arn
+        Protocol: lambda
+  ResponseprocessorLambdaPermissionPollybatchSNS:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !Ref 'ResponseprocessorLambdaFunction'
+      Action: 'lambda:InvokeFunction'
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref SNSTopicPollybatch
+
+  # The Set Completion step function watches for a set completing
+  SetcompletionloaderLambdaFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: amazon_polly_async_batch/
+      Handler: setcompletionwaiter.load_set_details
+      Runtime: python3.7
+      FunctionName: polly-batch-set-completion-loader
+      MemorySize: 128
+      Description: Loads a set from the database to see if it's finished
+      Environment:
+        Variables:
+          SET_COMPLETE_TOPIC_ARN: !Ref SetNotification
+          RESPONSE_TOPIC: polly-batch-topic
+          RESPONSE_TOPIC_ARN: !Ref SNSTopicPollybatch
+          SET_TABLE: polly-batch-sets
+          WORK_BUCKET: !Ref WorkBucket
+      Policies: 
+        - Statement:
+          - Effect: Allow
+            Action:
+              - 'logs:CreateLogStream'
+              - 'logs:CreateLogGroup'
+              - 'logs:PutLogEvents'
+            Resource:
+              - !Sub >-
+                arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/polly-batch-set-completion-loader:*:*
+          - Effect: Allow
+            Action:
+              - 'dynamodb:GetItem'
+            Resource:
+              - !GetAtt 
+                - SetTable
+                - Arn
+    DependsOn:
+      - SetcompletionloaderLogGroup
+  SetcompletionnotifierLambdaFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: amazon_polly_async_batch/
+      Handler: setcompletionwaiter.notify_of_set_completion
+      Runtime: python3.7
+      FunctionName: polly-batch-set-completion-notifier
+      MemorySize: 128
+      Description: 'After a set is completed, notifies the appropriate topic'
+      Environment:
+        Variables:
+          SET_COMPLETE_TOPIC_ARN: !Ref SetNotification
+          SET_TABLE: polly-batch-sets
+          WORK_BUCKET: !Ref WorkBucket
+      Policies: 
+      - Statement:
+        - Effect: Allow
+          Action:
+            - 'logs:CreateLogStream'
+            - 'logs:CreateLogGroup'
+            - 'logs:PutLogEvents'
+          Resource:
+            - !Sub >-
+              arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/polly-batch-set-completion-notifier:*:*
+        - Effect: Allow
+          Action:
+            - 'dynamodb:GetItem'
+          Resource:
+            - !GetAtt 
+              - SetTable
+              - Arn
+        - Effect: Allow
+          Action:
+            - 'sns:Publish'
+          Resource: !Ref SetNotification
+    DependsOn:
+      - SetcompletionnotifierLogGroup
+  SetproblemnotifierLambdaFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: amazon_polly_async_batch/
+      Handler: setcompletionwaiter.notify_of_set_problem
+      Runtime: python3.7
+      FunctionName: polly-batch-set-problem-notifier
+      MemorySize: 128
+      Description: 'After a set is completed, notifies the appropriate topic'
+      Environment:
+        Variables:
+          SET_COMPLETE_TOPIC_ARN: !Ref SetNotification
+          SET_TABLE: polly-batch-sets
+          WORK_BUCKET: !Ref WorkBucket
+      Policies: 
+        - Statement:
+          - Effect: Allow
+            Action:
+              - 'logs:CreateLogStream'
+              - 'logs:CreateLogGroup'
+              - 'logs:PutLogEvents'
+            Resource:
+              - !Sub >-
+                arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/polly-batch-dev-set-problem-notifier:*:*
+          - Effect: Allow
+            Action:
+              - 'dynamodb:GetItem'
+            Resource:
+              - !GetAtt 
+                - SetTable
+                - Arn
+          - Effect: Allow
+            Action:
+              - 'sns:Publish'
+            Resource: !Ref SetNotification
+    DependsOn:
+      - SetproblemnotifierLogGroup
+  SetcompletionloaderLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: /aws/lambda/polly-batch-dev-set-completion-loader
+  SetcompletionnotifierLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: /aws/lambda/polly-batch-dev-set-completion-notifier
+  SetproblemnotifierLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: /aws/lambda/polly-batch-dev-set-problem-notifier
+  PollybatchsetwaiterRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.us-east-1.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: polly-batch-statemachine
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'lambda:InvokeFunction'
+                Resource:
+                                
+                  - !Sub >-
+                     arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:polly-batch-set-completion-loader
+                  - !Sub >-
+                     arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:polly-batch-set-completion-notifier
+                  - !Sub >-
+                     arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:polly-batch-set-problem-notifier
+  Pollybatchsetwaiter:
+    Type: 'AWS::Serverless::StateMachine'
+    Properties:
+      DefinitionUri: amazon_polly_async_batch/pollybatchsetwaiter.asl.json  
+      Role: !GetAtt 
+        - PollybatchsetwaiterRole
+        - Arn
+
+  # Work is tracked in DynamoDb
+  TaskTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: polly-batch-tasks
+      AttributeDefinitions:
+        - AttributeName: taskId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: taskId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+  SetTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: polly-batch-sets
+      AttributeDefinitions:
+        - AttributeName: setName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: setName
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+
+  

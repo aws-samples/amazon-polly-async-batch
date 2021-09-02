@@ -1,0 +1,27 @@
+# Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+# This set read by the config tests
+set:
+  name: poem-set
+
+defaults:
+  engine: standard
+  language-code: en-US
+  output-format: mp3
+  voice-id: Matthew
+
+items:
+  # Simplest possible item: use all the defaults
+  - text: April is the cruelest month, breeding
+  # Specify an output file
+  - text: Lilacs out of the dead land, mixing
+    output-file: lilacs.mp3
+  # Override some defaults
+  - text: Memory and desire, stirring
+    language-code: en-GB
+    voice-id: Amy
+  # SSML
+  - text: <prosody pitch="low">Dull roots with spring rain.</prosody>
+    text-type: ssml
+
