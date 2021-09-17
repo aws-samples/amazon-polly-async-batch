@@ -6,7 +6,7 @@ set:
   output-prefix: act-1-scene-1
 
 defaults:
-  engine: standard
+  engine: neural 
   language-code: en-US
   output-format: mp3
   text-type: text
@@ -16,7 +16,7 @@ items:
     voice-id: Joey
   - text: I do bite my thumb, sir.
     voice-id: Matthew
-  - text: <speak>Do you bite your thumb at <emphasis>us</emphasis>, sir?</speak>
+  - text: <speak>Do you bite your thumb at <break/>us<break/>, sir?</speak>
     voice-id: Joey
     text-type: ssml
   - text: >
@@ -25,7 +25,7 @@ items:
     voice-id: Matthew
     text-type: ssml
   - text: <speak><amazon:effect name="whispered">No.</amazon:effect></speak>
-    voice-id: Justin
+    voice-id: Brian
     text-type: ssml
   - text: No, sir. I do not bite my thumb at you, sir, but I bite my thumb, sir.
     voice-id: Matthew
