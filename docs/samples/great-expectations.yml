@@ -2,10 +2,11 @@ set:
   name: great-expectations
   output-prefix: great-expectations
 defaults:
-  engine: standard
+  engine: neural
   output-format: mp3
   text-type: text
-  voice-id: Matthew
+  language-code: en-GB
+  voice-id: Brian
 items:
 - text: Ours was the marsh country, down by the river, within, as the river wound,
     twenty miles of the sea. My first most vivid and broad impression of the identity
