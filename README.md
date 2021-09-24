@@ -1,6 +1,8 @@
 # Amazon Polly Asynchronous Batch
 
-Run large numbers of voice synthesis tasks through Polly asynchronously.
+Run large numbers of voice synthesis tasks through Amazon Polly asynchronously.
+
+![Architecture](docs/amazon-polly-async-batch-architecture.png)
 
 This project contains source code and supporting files for a serverless application that you
 deploy into your own AWS account. It includes the following files and folders:
@@ -11,7 +13,7 @@ deploy into your own AWS account. It includes the following files and folders:
 
 To use the solution, you write a _set file_ containing the text you want
 turned into sound files. You upload this file to a specific S3 bucket
-in your account, and are then notified when Polly is done synthesizing all of
+in your account, and are then notified when Amazon Polly is done synthesizing all of
 them.
 
 ## Deployment
@@ -73,7 +75,7 @@ Initial deployment can take a few minutes.
 
 ## Operation
 
-Create a set file in YAML describing the text you want Polly to voice, including optional
+Create a set file in YAML describing the text you want Amazon Polly to voice, including optional
 filenames for the sound files. Upload this file to the S3 bucket watched by the application.
 
 The [docs/samples](docs/samples) folder contains a number of sample files to try.
@@ -85,7 +87,7 @@ issue this copy command:
 $ aws s3 cp docs/samples/moby-dick.yml s3:\\*[YOUR BUCKET]*
 ```
 
-Audio files will be placed in `s3:\\[YOUR BUCKET]\moby-dick` as Polly completes them. Once all the
+Audio files will be placed in `s3:\\[YOUR WORK BUCKET]\moby-dick` as Amazon Polly completes them. Once all the
 paragraphs have been voiced, you will receive email notification.
 
 ## Cleanup
