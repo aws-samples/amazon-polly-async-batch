@@ -16,7 +16,7 @@ turned into sound files. You upload this file to a specific S3 bucket
 in your account, and are then notified when Amazon Polly is done synthesizing all of
 them.
 
-## Deploymentgi
+## Deployment
 
 Use AWS Server Application Model (SAM) to deploy the solution stack.
 
@@ -45,7 +45,7 @@ $ sam build
 To deploy the service, issue the `deploy` command:
 
 ```bash
-$ sam deploy --stack-name amazon-polly-async-batch --guided
+$ sam deploy --guided
 ```
 
 When prompted, specify the preferred region, notification email, and so on. You should also specify a non-existent
@@ -55,12 +55,10 @@ S3 bucket, your "work bucket," that will receive the audio files Amazon Polly ma
 Configuring SAM deploy
 ======================
 
-        Looking for config file [samconfig.toml] :  Not found
-
         Setting default arguments for 'sam deploy'
         =========================================
         Stack Name [amazon-polly-async-batch]: 
-        AWS Region [us-east-1]: 
+        AWS Region [us-east-1]:
         Parameter Notifyemail []: [YOUR EMAIL ADDRESS]
         Parameter WorkBucket []: [YOUR WORK BUCKET]
         #Shows you resources changes to be deployed and require a 'Y' to initiate deploy
@@ -73,22 +71,26 @@ Configuring SAM deploy
 ...
 ```
 
-Initial deployment can take a few minutes. 
+Initial deployment can take a few minutes. Eventually you should see:
+
+```
+Successfully created/updated stack - amazon-polly-async-batch in us-east-1
+```
 
 ## Operation
 
 Create a set file in YAML describing the text you want Amazon Polly to voice, including optional
-filenames for the sound files. Upload this file to the S3 bucket watched by the application.
+filenames for the sound files. Upload this file to the bucket you specified when you deployed.
 
 The [docs/samples](docs/samples) folder contains a number of sample files to try.
 
 For example, to synthesize a few lines from the play _Romeo and Juliet_, issue this command:
 
 ```bash
-$ aws s3 cp docs/samples/romeo-juliet.yml s3:\\[YOUR WORK BUCKET]
+$ aws s3 cp docs/samples/romeo-juliet.yml s3://[YOUR WORK BUCKET]
 ```
 
-Audio files will be placed in `s3:\\[YOUR WORK BUCKET]\act-1-scene-1` as Amazon Polly completes them. Once all the
+Audio files will be placed in `s3://[YOUR WORK BUCKET]\act-1-scene-1` as Amazon Polly completes them. Once all the
 paragraphs have been voiced, you will receive email notification.
 
 ## Cleanup
@@ -96,7 +98,7 @@ paragraphs have been voiced, you will receive email notification.
 When not in use, the only charge for using the solution is the storage costs for the 
 files in the S3 bucket, and for records left in DynamoDB.
 
-To delete the solution, delete any configuration or sound files from the main bucket, then use 
+To delete the solution, delete any configuration or sound files from your work bucket, then use 
 CloudFormation to delete the stack. 
 
 ```bash
