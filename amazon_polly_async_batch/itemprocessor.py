@@ -61,9 +61,10 @@ def process_item(item):
     try:
         polly_task = submit_item_to_polly(item)
         task_table.put_new_task(polly_task, item, 'Task submitted')
-        logger.debug('Posted job for {} as polly task {}'.format(item_name, polly_task['TaskId']))
+        logger.debug('Posted item for {} as polly task {}'.format(item_name, polly_task['TaskId']))
         return polly_task['TaskId']
     except Exception as e:
+        logger.warning('Failed to post item for {} because {}'.format(item_name, str(e)))
         task_table.put_failed_task(item, str(e))
         dynamo.SetTable(SET_TABLE).post_failure(item['set-name'])
         return None
