@@ -96,6 +96,18 @@ Resources:
     Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: !Ref WorkBucket
+      BucketEncryption: 
+        ServerSideEncryptionConfiguration: 
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+        
+      PublicAccessBlockConfiguration: 
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+
   SetProcessorLambdaPermissionPollyS3:
     Type: 'AWS::Lambda::Permission'
     Properties:
@@ -131,6 +143,7 @@ Resources:
     Properties:
       DisplayName: Polly Batch processing complete
       TopicName: polly-batch-set-complete
+      KmsMasterKeyId: alias/aws/sns
   SNSTopicPollyBatchSubscription:
     Type: AWS::SNS::Subscription
     Properties:
@@ -238,6 +251,7 @@ Resources:
     Type: 'AWS::SQS::Queue'
     Properties:
       QueueName: polly-batch
+      KmsMasterKeyId: alias/aws/sqs
       VisibilityTimeout: 60
 
   # The Response Processor handles notifications from Polly
@@ -307,6 +321,7 @@ Resources:
             - ResponseProcessorLambdaFunction
             - Arn
         Protocol: lambda
+      KmsMasterKeyId: alias/aws/sns
   ResponseProcessorLambdaPermissionPollyBatchSNS:
     Type: 'AWS::Lambda::Permission'
     Properties:
@@ -483,10 +498,15 @@ Resources:
         - AttributeName: taskId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      SSESpecification: 
+        SSEEnabled:  false
+     
   SetTable:
     Type: 'AWS::DynamoDB::Table'
     Properties:
       TableName: polly-batch-sets
+      SSESpecification: 
+        SSEEnabled:  false
       AttributeDefinitions:
         - AttributeName: setName
           AttributeType: S
