@@ -1,0 +1,8 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "amazon-polly-async-batch"
+s3_prefix = "amazon-polly-async-batch"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
