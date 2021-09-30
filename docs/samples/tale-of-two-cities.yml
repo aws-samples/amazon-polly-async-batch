@@ -2,10 +2,11 @@ set:
   name: tale-of-two-cities
   output-prefix: tale-of-two-cities
 defaults:
-  engine: standard
+  engine: neural
   output-format: mp3
   text-type: text
-  voice-id: Matthew
+  languge-code: en-GB
+  voice-id: Brian
 items:
 - text: It was the best of times, it was the worst of times, it was the age of wisdom,
     it was the age of foolishness, it was the epoch of belief, it was the epoch of

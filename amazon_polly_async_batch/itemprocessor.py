@@ -13,8 +13,8 @@ from botocore.config import Config
 dynamodb = boto3.client('dynamodb')
 polly = boto3.client('polly', config=Config(
     retries={
-        'max_attempts': 10,
-        'mode': 'standard'
+        'max_attempts': 5,
+        'mode': 'adaptive'
     }))
 sns = boto3.client('sns')
 logger = logging.getLogger()
@@ -29,7 +29,7 @@ TASK_TABLE = os.environ['TASK_TABLE']
 def process_sqs_message(event, context):
     """
     Given a set of SQS messages in the event, each consisting of a number of text fragments to synthesize into speech,
-    processes each in turn by posting them to Polly. Adds an in the DynamoDb WORK_TABLE for tracking each. Polly will
+    processes each in turn by posting them to Polly. Adds an in the DynamoDB WORK_TABLE for tracking each. Polly will
     synthesize the speech, place the generated sound file in the WORK_BUCKET, and notify the response topic.
 
     :param event: a set of items to synthesize into speech
@@ -61,10 +61,10 @@ def process_item(item):
     try:
         polly_task = submit_item_to_polly(item)
         task_table.put_new_task(polly_task, item, 'Task submitted')
-        logger.debug('Posted item for {} as polly task {}'.format(item_name, polly_task['TaskId']))
+        logger.debug('Posted item {} as polly task {}'.format(item_name, polly_task['TaskId']))
         return polly_task['TaskId']
     except Exception as e:
-        logger.warning('Failed to post item for {} because {}'.format(item_name, str(e)))
+        logger.error('Failed to post item {} as polly task because {}'.format(item_name, str(e)))
         task_table.put_failed_task(item, str(e))
         dynamo.SetTable(SET_TABLE).post_failure(item['set-name'])
         return None
