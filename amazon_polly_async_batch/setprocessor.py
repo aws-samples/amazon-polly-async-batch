@@ -47,18 +47,19 @@ def process_set(event, context):
 
 def process_config(cfg):
     """
-    Stores the set details in Dynamo, then processes all the items in the passed-in Config object.
+    Stores the set details in DynamoDB, then processes all the items in the passed-in Config object.
 
     :param cfg: the config file
     """
     queue = get_queue(ITEM_QUEUE)
-    successes, failures = 0, 0
+    count, successes, failures = 0, 0, 0
     dynamo.SetTable(SET_TABLE).put_new_set(cfg)
     for item in cfg.items():
-        if post_item(queue, item):
+        if post_item(queue, item, count):
             successes = successes + 1
         else:
             failures = failures + 1
+        count = count + 1
     logger.info('Successfully posted {} items in set {} to {}; {} failures.'.format(successes, cfg.set_name_unique(),
                                                                                     ITEM_QUEUE, failures))
 
@@ -68,7 +69,7 @@ def load_config(bucket, key):
     Given a bucket name and a key which contains a configuration file, loads it up and returns it as a Config object
 
     :param bucket: the S3 bucket where the config file is
-    :param key: the key to the file
+    :param key: the key of the file
     :return: a populated Config object
     """
     try:
@@ -95,18 +96,23 @@ def get_queue(name):
         raise Exception(msg)
 
 
-def post_item(queue, item):
+def post_item(queue, item, count):
     """
-    Posts an item to a queue
+    Posts an item as a message to an SQS queue
 
-    :param queue: the SQS object
+    :param queue: the SQS queue
     :param item: the item to post
     :return: success of operation
     """
     item_name = item.get('output-file', '[unidentified]')
+    # Neural voices have a much lower tps service quota, so put them all in the same group. This effectively
+    # single-threads their processing. Standard voices can fan out more without trouble.
+    item_group = 'neural' if item['engine'] == 'neural' else 'standard-{}'.format(count % 5)
     try:
-        logger.debug('Posting item {} to queue'.format(item_name))
-        queue.send_message(MessageBody=json.dumps(item))
+        logger.debug('Posting item {} to queue group {}'.format(item_name, item_group))
+        queue.send_message(MessageBody=json.dumps(item), 
+            MessageGroupId=item_group,
+            MessageDeduplicationId=item_name)
         return True
     except Exception as e:
         logger.error('Failed to post item for {} because {}'.format(item_name, str(e)))

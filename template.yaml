@@ -30,7 +30,7 @@ Resources:
       Environment:
         Variables:
           WORK_BUCKET: !Ref WorkBucket
-          ITEM_QUEUE: polly-batch
+          ITEM_QUEUE: polly-batch.fifo
           TASK_TABLE: polly-batch-tasks
           SET_TABLE: polly-batch-sets
           RESPONSE_TOPIC: polly-batch-topic
@@ -141,7 +141,7 @@ Resources:
   SetNotification:
     Type: 'AWS::SNS::Topic'
     Properties:
-      DisplayName: Polly Batch processing complete
+      DisplayName: Amazon Polly Async Batch
       TopicName: polly-batch-set-complete
       KmsMasterKeyId: alias/aws/sns
   SNSTopicPollyBatchSubscription:
@@ -166,7 +166,7 @@ Resources:
       Environment:
         Variables:
           WORK_BUCKET: !Ref WorkBucket
-          ITEM_QUEUE: polly-batch
+          ITEM_QUEUE: polly-batch.fifo
           TASK_TABLE: polly-batch-tasks
           SET_TABLE: polly-batch-sets
           RESPONSE_TOPIC: polly-batch-topic
@@ -239,7 +239,7 @@ Resources:
   ItemProcessorEventSourceMappingSQSItemQueue:
     Type: 'AWS::Lambda::EventSourceMapping'
     Properties:
-      BatchSize: 10
+      BatchSize: 1
       EventSourceArn: !GetAtt 
         - ItemQueue
         - Arn
@@ -247,10 +247,13 @@ Resources:
         - ItemProcessorLambdaFunction
         - Arn
       Enabled: true
+      
+  # The queue of work is FIFO to minimize fanning out due to service quota limits; see setprocessor.py
   ItemQueue:
     Type: 'AWS::SQS::Queue'
     Properties:
-      QueueName: polly-batch
+      QueueName: polly-batch.fifo
+      FifoQueue: true
       KmsMasterKeyId: alias/aws/sqs
       VisibilityTimeout: 60
 
@@ -267,7 +270,7 @@ Resources:
       Environment:
         Variables:
           WORK_BUCKET: !Ref WorkBucket
-          ITEM_QUEUE: polly-batch
+          ITEM_QUEUE: polly-batch.fifo
           TASK_TABLE: polly-batch-tasks
           SET_TABLE: polly-batch-sets
           RESPONSE_TOPIC: polly-batch-topic
