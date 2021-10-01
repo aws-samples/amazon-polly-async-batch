@@ -44,7 +44,7 @@ class Config:
         """
         defaults = self.c.get('defaults', {})
         return {
-            'engine': defaults.get('engine', 'standard'),
+            'engine': defaults.get('engine', 'neural'),
             'language-code': defaults.get('language-code', 'en-US'),
             'output-format': defaults.get('output-format', 'mp3'),
             'text-type': defaults.get('text-type', 'text'),

@@ -1,10 +1,27 @@
 # Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
+
+from os import path
 from amazon_polly_async_batch import config
 
 
+def samples_dir():
+    """Return the path to the directory with the samples files"""
+    basepath = path.dirname(__file__)
+    return path.abspath(path.join(basepath, '..', '..', 'docs', 'samples'))
+
+
+def get_item(n, file='valid-set.yml'):
+    """Parse the specified file and return the nth item"""
+    with open('{}/{}'.format(samples_dir(), file), 'r') as stream:
+        cfg = config.Config(stream)
+        # items() is a generator so convert to a list so we can subscript it
+        items = [item for item in cfg.items()]
+        return items[n]
+
+
 def test_valid_parser():
-    with open('../../docs/samples/valid-set.yml', 'r') as stream:
+    with open('{}/valid-set.yml'.format(samples_dir()), 'r') as stream:
         cfg = config.Config(stream)
         assert cfg.set_name() == 'poem-set'
         assert cfg.item_count() == 4
@@ -12,16 +29,16 @@ def test_valid_parser():
         assert cfg.output_s3_key_prefix() == 'poem-set'
 
 
-def test_sparse_item():
-    item = get_item(0)
-    assert item['engine'] == 'standard'
+def test_minimal_item():
+    item = get_item(0, 'minimal-set.yml')
+    assert item['engine'] == 'neural'
     assert item['language-code'] == 'en-US'
     assert item['output-format'] == 'mp3'
     assert item['text-type'] == 'text'
     assert item['voice-id'] == 'Matthew'
-    assert item['text'] == 'April is the cruelest month, breeding'
-    assert item['output-file'] == 'poem-set/item-000000-april-is-the-cruelest-month-breeding.mp3'
-    assert item['set-name'].startswith('poem-set-')
+    assert item['text'] == 'A short sentence.'
+    assert item['output-file'] == 'minimal-set/item-000000-a-short-sentence.mp3'
+    assert item['set-name'].startswith('minimal-set-')
 
 
 def test_specify_output_file():
@@ -48,11 +65,3 @@ def test_ssml():
     assert item['text-type'] == 'ssml'
     assert item['text'] == '<prosody pitch="low">Dull roots with spring rain.</prosody>'
     assert item['output-file'] == 'poem-set/item-000003-prosody-pitch-low-dull-roots-with-spring.mp3'
-
-
-def get_item(n):
-    with open('../../docs/samples/valid-set.yml', 'r') as stream:
-        cfg = config.Config(stream)
-        # items() is a generator so convert to a list so we can subscript it
-        items = [item for item in cfg.items()]
-        return items[n]
