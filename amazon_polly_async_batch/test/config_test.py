@@ -11,9 +11,9 @@ def samples_dir():
     return path.abspath(path.join(basepath, '..', '..', 'docs', 'samples'))
 
 
-def get_item(n):
-    """Parse the valid-set.yml file and return the nth item"""
-    with open('{}/valid-set.yml'.format(samples_dir()), 'r') as stream:
+def get_item(n, file='valid-set.yml'):
+    """Parse the specified file and return the nth item"""
+    with open('{}/{}'.format(samples_dir(), file), 'r') as stream:
         cfg = config.Config(stream)
         # items() is a generator so convert to a list so we can subscript it
         items = [item for item in cfg.items()]
@@ -29,16 +29,16 @@ def test_valid_parser():
         assert cfg.output_s3_key_prefix() == 'poem-set'
 
 
-def test_sparse_item():
-    item = get_item(0)
-    assert item['engine'] == 'standard'
+def test_minimal_item():
+    item = get_item(0, 'minimal-set.yml')
+    assert item['engine'] == 'neural'
     assert item['language-code'] == 'en-US'
     assert item['output-format'] == 'mp3'
     assert item['text-type'] == 'text'
     assert item['voice-id'] == 'Matthew'
-    assert item['text'] == 'April is the cruelest month, breeding'
-    assert item['output-file'] == 'poem-set/item-000000-april-is-the-cruelest-month-breeding.mp3'
-    assert item['set-name'].startswith('poem-set-')
+    assert item['text'] == 'A short sentence.'
+    assert item['output-file'] == 'minimal-set/item-000000-a-short-sentence.mp3'
+    assert item['set-name'].startswith('minimal-set-')
 
 
 def test_specify_output_file():

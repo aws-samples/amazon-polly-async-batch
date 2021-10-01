@@ -1,0 +1,9 @@
+# Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+# This set read by the config tests
+set:
+  name: minimal-set
+
+items:
+  - text: A short sentence.
