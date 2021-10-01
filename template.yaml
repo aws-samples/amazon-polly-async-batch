@@ -212,6 +212,7 @@ Resources:
             - Effect: Allow
               Action:
                 - 'dynamodb:DeleteItem'
+                - 'dynamodb:GetItem'
                 - 'dynamodb:PutItem'
                 - 'dynamodb:UpdateItem'
               Resource:

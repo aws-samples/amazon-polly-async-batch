@@ -3,7 +3,10 @@
 import boto3
 import datetime
 import logging
+import time
 import uuid
+
+from botocore.exceptions import ClientError
 
 dynamodb = boto3.client('dynamodb')
 logger = logging.getLogger()
@@ -59,26 +62,48 @@ class SetTable(object):
         Updates the set incrementing the successes field, and setting the updated date to now.
         :param set_name: the name of the set
         """
-        dynamodb.update_item(
-            TableName=self.table_name,
-            Key={'setName': {'S': set_name}},
-            UpdateExpression='ADD successes :num SET updatedTime = :when',
-            ExpressionAttributeValues={':num': {'N': '1'},
-                                       ':when': {'S': datetime.datetime.now().isoformat()}}
-        )
+        self.increment_counter(set_name, 'successes')
 
     def post_failure(self, set_name):
         """
         Updates the set incrementing the failures field, and setting the updated date to now.
         :param set_name: the name of the set
         """
-        dynamodb.update_item(
-            TableName=self.table_name,
-            Key={'setName': {'S': set_name}},
-            UpdateExpression='ADD failures :num SET updatedTime = :when',
-            ExpressionAttributeValues={':num': {'N': '1'},
-                                       ':when': {'S': datetime.datetime.now().isoformat()}}
-        )
+        self.increment_counter(set_name, 'failures')
+
+    def increment_counter(self, set_name, field):
+        """
+        Increments the `field` counter by 1 for the `set_name`. Because this method can be executing
+        in multiple Lambdas concurrently, use a conditional update so we don't lose counters.
+        :param set_name: the name of the set
+        :param field: the field to increment (successes or failures)
+        """
+        success, attempts = False, 0
+        while attempts <= 10 and not success:
+            try:
+                attempts = attempts + 1
+                # Load up the existing record
+                existing = self.get_set(set_name)
+                # Add one to the correct field, so long as no one updated in the meantime
+                results = dynamodb.update_item(
+                    TableName=self.table_name,
+                    Key={'setName': {'S': set_name}},
+                    UpdateExpression='ADD {} :num SET updatedTime = :when'.format(field),
+                    ConditionExpression='{} = :existing'.format(field),
+                    ExpressionAttributeValues={':num': {'N': '1'},
+                                               ':existing': {'N': '{}'.format(existing[field]['N'])},
+                                               ':when': {'S': datetime.datetime.now().isoformat()}}
+                )
+                # Got this far? Then success!
+                success = True
+            except ClientError as e:
+                if e.response['Error']['Code'] == 'ConditionalCheckFailedException': 
+                    # Another Lambda updated the value under our feet; sleep a teeny bit and try again
+                    time.sleep(0.1)
+                else:
+                    raise
+        if not success:
+            logger.error('Failed to increment {} for set {}'.format(set_name, field))
 
 
 class TaskTable(object):
