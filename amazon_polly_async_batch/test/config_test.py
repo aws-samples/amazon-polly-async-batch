@@ -1,10 +1,27 @@
 # Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
+
+from os import path
 from amazon_polly_async_batch import config
 
 
+def samples_dir():
+    """Return the path to the directory with the samples files"""
+    basepath = path.dirname(__file__)
+    return path.abspath(path.join(basepath, '..', '..', 'docs', 'samples'))
+
+
+def get_item(n):
+    """Parse the valid-set.yml file and return the nth item"""
+    with open('{}/valid-set.yml'.format(samples_dir()), 'r') as stream:
+        cfg = config.Config(stream)
+        # items() is a generator so convert to a list so we can subscript it
+        items = [item for item in cfg.items()]
+        return items[n]
+
+
 def test_valid_parser():
-    with open('../../docs/samples/valid-set.yml', 'r') as stream:
+    with open('{}/valid-set.yml'.format(samples_dir()), 'r') as stream:
         cfg = config.Config(stream)
         assert cfg.set_name() == 'poem-set'
         assert cfg.item_count() == 4
@@ -48,11 +65,3 @@ def test_ssml():
     assert item['text-type'] == 'ssml'
     assert item['text'] == '<prosody pitch="low">Dull roots with spring rain.</prosody>'
     assert item['output-file'] == 'poem-set/item-000003-prosody-pitch-low-dull-roots-with-spring.mp3'
-
-
-def get_item(n):
-    with open('../../docs/samples/valid-set.yml', 'r') as stream:
-        cfg = config.Config(stream)
-        # items() is a generator so convert to a list so we can subscript it
-        items = [item for item in cfg.items()]
-        return items[n]

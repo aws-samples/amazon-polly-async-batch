@@ -37,21 +37,21 @@ Clone this project's source code, then use SAM to process the [template file](./
 which defines the resources that will be built in your account:
 
 ```bash
-$ git clone https://github.com/aws-samples/amazon-polly-async-batch.git
-$ cd amazon-polly-async-batch
-$ sam build
+git clone https://github.com/aws-samples/amazon-polly-async-batch.git
+cd amazon-polly-async-batch
+sam build
 ```
 
 To deploy the service, issue the `deploy` command:
 
 ```bash
-$ sam deploy --guided
+sam deploy --guided
 ```
 
 When prompted, specify the preferred region, notification email, and so on. You should also specify a non-existent
 S3 bucket, your "work bucket," that will receive the audio files Amazon Polly makes.
 
-```bash
+```
 Configuring SAM deploy
 ======================
 
@@ -87,7 +87,7 @@ The [docs/samples](docs/samples) folder contains a number of sample files to try
 For example, to synthesize a few lines from the play _Romeo and Juliet_, issue this command:
 
 ```bash
-$ aws s3 cp docs/samples/romeo-juliet.yml s3://[YOUR WORK BUCKET]
+aws s3 cp docs/samples/romeo-juliet.yml s3://[YOUR WORK BUCKET]
 ```
 
 Audio files will be placed in `s3://[YOUR WORK BUCKET]\act-1-scene-1` as Amazon Polly completes them. Once all the
@@ -102,8 +102,12 @@ To delete the solution, delete any configuration or sound files from your work b
 CloudFormation to delete the stack. 
 
 ```bash
-$ aws cloudformation delete-stack --stack-name amazon-polly-async-batch
+aws cloudformation delete-stack --stack-name amazon-polly-async-batch
 ```
+
+## Tests
+
+This project uses [pytest](https://docs.pytest.org).
 
 ## Security
 
