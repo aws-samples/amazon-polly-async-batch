@@ -144,6 +144,40 @@ Resources:
       DisplayName: Amazon Polly Async Batch
       TopicName: polly-batch-set-complete
       KmsMasterKeyId: alias/aws/sns
+        
+  # Policy for SNS Topic polly-Batch-Set-Complete
+  SNSPollyCompleteBatchPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: TopicPolicy
+        Version: '2012-10-17'
+        Statement:
+        - Sid: Topic-Statement-1
+          Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sns:Publish
+          Resource: !Ref SetNotification
+      Topics:
+      - !Ref SetNotification
+  # Policy for SNS Topic polly-Batch
+  SNSPollyBatchPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: TopicBatchPolicy
+        Version: '2012-10-17'
+        Statement:
+        - Sid: Topic-Statement-1
+          Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sns:Publish
+          Resource: !Ref SNSTopicPollyBatch
+      Topics:
+      - !Ref SNSTopicPollyBatch
+  
   SNSTopicPollyBatchSubscription:
     Type: AWS::SNS::Subscription
     Properties:
