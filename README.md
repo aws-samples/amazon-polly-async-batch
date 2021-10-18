@@ -79,7 +79,7 @@ Successfully created/updated stack - amazon-polly-async-batch in us-east-1
 
 ## Operation
 
-Create a set file in YAML describing the text you want Amazon Polly to voice, including optional
+Create a [set file](docs/set-file.md) in YAML describing the text you want Amazon Polly to voice, including optional
 filenames for the sound files. Upload this file to the bucket you specified when you deployed.
 
 The [docs/samples](docs/samples) folder contains a number of sample files to try.
