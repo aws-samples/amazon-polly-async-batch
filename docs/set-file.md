@@ -17,7 +17,7 @@ The [smallest valid set file](samples/minimal-set.yml) shows this.
 ### The `set` Section
 
 - `name`: The name of this set, to differentiate it from others. These can be any
-S3 (safe characters)[https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html],
+S3 [safe characters](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html),
 but is typically something like `my-project`.
 - `description`: An optional description
 - `prefix`: An optional prefix for where the output files will go in S3. This
@@ -34,7 +34,7 @@ value can be overridden by an item. If you don't include an attribute in the
 to speech. Either `neural` or `standard`; defaults to `neural`
 - `language-code`: Any suppported language; defaults to `en-US`. Note that 
 you need to make sure the language code matches the language spoken by the voice.
-- `voice-id`: Any of the (supported voices)[https://docs.aws.amazon.com/polly/latest/dg/voicelist.html].
+- `voice-id`: Any of the [supported voices](https://docs.aws.amazon.com/polly/latest/dg/voicelist.html).
 Note that the voice you choose must match the `language-code`, and not every
 voice is supported in every engine. Defaults to `Matthew`.
 - `text-type`: Either `text` or `ssml`; defaults to `text`.
