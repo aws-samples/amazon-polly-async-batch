@@ -12,7 +12,7 @@ The set file is a simple YAML file, ending in the `.yml` extension.
 It consists of a mandatory `set` section, an optional `defaults` section,
 and a mandatory list of `items` to synthesize.
 
-The [smallest valid set file](samples/valid-set.yml) shows this.
+The [smallest valid set file](samples/minimal-set.yml) shows this.
 
 ### The `set` Section
 
