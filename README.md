@@ -93,6 +93,8 @@ aws s3 cp docs/samples/romeo-juliet.yml s3://[YOUR WORK BUCKET]
 Audio files will be placed in `s3://[YOUR WORK BUCKET]\act-1-scene-1` as Amazon Polly completes them. Once all the
 paragraphs have been voiced, you will receive email notification.
 
+Information about monitoring the solution are in the [operations documentation](docs/operations.md) file.
+
 ## Cleanup
 
 When not in use, the only charge for using the solution is the storage costs for the 
