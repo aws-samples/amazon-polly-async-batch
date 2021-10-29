@@ -16,6 +16,8 @@ turned into sound files. You upload this file to a specific S3 bucket
 in your account, and are then notified when Amazon Polly is done synthesizing all of
 them.
 
+You can read about this solution on the [AWS Machine Learning Blog](https://aws.amazon.com/blogs/machine-learning/optimize-your-budget-and-time-by-submitting-amazon-polly-voice-synthesis-tasks-in-bulk/).
+
 ## Deployment
 
 Use AWS Server Application Model (SAM) to deploy the solution stack.
