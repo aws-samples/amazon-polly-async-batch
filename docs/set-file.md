@@ -12,17 +12,16 @@ The set file is a simple YAML file, ending in the `.yml` extension.
 It consists of a mandatory `set` section, an optional `defaults` section,
 and a mandatory list of `items` to synthesize.
 
-The [smallest valid set file](samples/minimal-set.yml) shows this.
-
 ### The `set` Section
 
 - `name`: The name of this set, to differentiate it from others. These can be any
 S3 [safe characters](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html),
-but is typically something like `my-project`.
+but is typically something like `my-project`. If you don't specify a `prefix` in this
+section, generated audio files will be placed in this prefix in the S3 bucket.
 - `description`: An optional description
-- `prefix`: An optional prefix for where the output files will go in S3. This
-can be any S3 safe characters, but is typically something like `my-project-r2`.
-If you don't specify a prefix, the `name` will be used.
+- `prefix`: An optional prefix for where the generated audio files will be placed in 
+the S3 bucket. This can be any S3 safe characters, but is typically something like 
+`my-project-r2`. If you don't specify a prefix, the `name` will be used for a prefix.
 
 ### The `defaults` Section
 
@@ -54,3 +53,7 @@ is `ssml`, then the value of this attribute should be valid SSML, for example
 - `output-file`: The name of the file where you want the output to go. If you
 don't include this attribute, the solution will create a unique filename for you
 from the text and the order of the item.
+
+## Notes
+
+- Save your set file in utf-8 format if the language you're using requires it. 
