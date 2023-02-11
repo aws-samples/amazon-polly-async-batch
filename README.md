@@ -2,7 +2,10 @@
 
 Run large numbers of voice synthesis tasks through Amazon Polly asynchronously.
 
-![Architecture](docs/amazon-polly-async-batch-architecture.png)
+To use this solution, you write _set files_, simple YAML files containing the text you want turned into spoken audio.
+When you upload these set files to a predetermined S3 bucket in your AWS account, Amazon Polly will 
+asynchronously synthesize spoken audio for the text you specified, place the audio files in your S3 bucket,
+and notify you when all have been completed.
 
 This project contains source code and supporting files for a serverless application that you
 deploy into your own AWS account. It includes the following files and folders:
@@ -11,16 +14,13 @@ deploy into your own AWS account. It includes the following files and folders:
  * `docs` - Documentation 
  * `docs/samples` - Books from the public domain to test the application
 
-To use the solution, you write a _set file_ containing the text you want
-turned into sound files. You upload this file to a specific S3 bucket
-in your account, and are then notified when Amazon Polly is done synthesizing all of
-them.
-
 You can read about this solution on the [AWS Machine Learning Blog](https://aws.amazon.com/blogs/machine-learning/optimize-your-budget-and-time-by-submitting-amazon-polly-voice-synthesis-tasks-in-bulk/).
 
 ## Deployment
 
-Use AWS Server Application Model (SAM) to deploy the solution stack.
+Use AWS Server Application Model (SAM) to deploy the solution stack. The following diagram shows what is deployed.
+
+![Architecture](docs/amazon-polly-async-batch-architecture.png)
 
 ### Preconditions
 
@@ -50,7 +50,7 @@ To deploy the service, issue the `deploy` command:
 sam deploy --guided
 ```
 
-When prompted, specify the preferred region, notification email, and so on. You should also specify a non-existent
+When prompted, specify the preferred region, notification email, and so on. You should also specify a _non-existent_
 S3 bucket, your "work bucket," that will receive the audio files Amazon Polly makes.
 
 ```
